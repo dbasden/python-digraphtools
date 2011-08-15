@@ -10,4 +10,11 @@ setup(
 	license='LICENSE.txt',
 	description='Some tools for working with digraphs, partial orders and topological sorting with Python',
 	long_description=open('README.txt').read(),
+	classifiers = [
+		'Intended Audience :: Developers',
+		'Development Status :: 3 - Alpha',
+		'License :: OSI Approved :: BSD License',
+		'Operating System :: OS Independent',
+		'Programming Language :: Python',
+	],
 )
