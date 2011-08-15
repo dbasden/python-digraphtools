@@ -1,3 +1,4 @@
+
 ============
 digraphtools
 ============
@@ -8,6 +9,8 @@ topological sorting with Python
 digraphtools was written as a lightweight way of using DAGs and partial
 ordering to represent, sort and traverse dependency trees in a lightweight
 way.
+
+The code is hosted on github at https://github.com/dbasden/python-digraphtools
 
 Graph Representation
 ====================
