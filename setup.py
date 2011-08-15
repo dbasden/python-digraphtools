@@ -5,7 +5,7 @@ setup(
 	version='0.1.0',
 	author='David Basden',
 	author_email='davidb-python@rcpt.to',
-	packages['digraphtools','digraphtools.test']
+	packages=['digraphtools','digraphtools.test'],
 	url='http://pypi.python.org/pypi/digraphtools/',
 	license='LICENSE.txt',
 	description='Some tools for working with digraphs, partial orders and topological sorting with Python',
