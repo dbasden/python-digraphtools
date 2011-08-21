@@ -16,6 +16,14 @@ e.g.
 
 Also, generate predicates such as above from strings
 
+	pf = PredicateContainsFactory()
+	anyof2 = pf.predicate_from_string('a | b | c')
+	pallof2 = pf.predicate_from_string('a & b & c')
+	not_anyof2 = pf.predicate_from_string('!(a & b & c)')
+	assert anyof2('--a--')
+	assert allof2('-abc-')
+	assert not_anyof2('12345')
+
 These can be very useful for filtering of dependency graphs
 '''
 
@@ -271,6 +279,16 @@ if __name__ == "__main__":
 		assert not pred( [] )
 		assert not pred( ['cow'] )
 		assert not pred( ['bat','pig'] )
+
+		a = predicate(lambda s: 'a' in s)
+		b = predicate(lambda s: 'b' in s)
+		c = predicate(lambda s: 'c' in s)
+		anyof2 = pf.predicate_from_string('a | b | c')
+		allof2 = pf.predicate_from_string('a & b & c')
+		not_anyof2 = pf.predicate_from_string('!(a & b & c)')
+		assert anyof2('--a--')
+		assert allof2('-abc-')
+		assert not_anyof2('12345')
 
 	defer_sample()
 	predicate_sample()
