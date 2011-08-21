@@ -1,6 +1,26 @@
 #! /usr/bin/env python
 
+'''predicates that can be chained together with boolean expressions before evaluation
+
+e.g.
+	a = predicate(lambda s: 'a' in s)
+	b = predicate(lambda s: 'b' in s)
+	c = predicate(lambda s: 'c' in s)
+
+	anyof = a | b | c
+	allof = a & b & c
+	not_anyof = anyof != True
+	assert anyof('--a--')
+	assert allof('-abc-')
+	assert not_anyof('12345')
+
+Also, generate predicates such as above from strings
+
+These can be very useful for filtering of dependency graphs
+'''
+
 import operator
+import re
 
 def defer(origfunc,*argfs,**argfd):
 	'''defer execution of the arguments of a function
@@ -66,6 +86,127 @@ class notp(predicate):
 		return not predicate.__call__(self, *args, **argd)
 
 
+
+def partition_list(items, partition):
+	'''works like str.partition but for lists
+	e.g. partition(['aa','bb','cd','ee'],'cd') == ['aa','bb'],'cd',['ee']
+	     partition(['aa','bb','cd','ee'],'ff') == ['aa','bb','cd','ee'],None,[]
+	'''
+	for i,obj in enumerate(items):
+		if obj == partition:
+			return items[:i],obj,items[i+1:]
+	return items,None,[]
+
+class ParseSyntaxError(Exception): pass
+class LexParse(object):
+	'''very simple lexer/parser'''
+	class _leaf(object):
+		def __init__(self, data): self.data = data
+		def __repr__(self): return '_leaf(%s)' %(repr(self.data))
+
+	valid_tokens = ['(',')','!','&','|']
+	def lex(self, s):
+		'''returns a list of tokens from a string
+		tokens returned are anything inside self.valid_tokens or
+		any other string not containing tokens, stripped
+		of leading and trailing whitespace
+		'''
+		s = s.strip()
+		if s == '': return []
+		for tok in self.valid_tokens:
+			l,t,r = s.partition(tok)
+			if t==tok: return self.lex(l)+[tok]+self.lex(r)
+		return [self._leaf(s)]
+
+	def parse(self, tokens):
+		'''parse a list of tokens in order of predicence and return the output'''
+		if len(tokens) == 0:
+			raise ParseSyntaxError('Cannot parse empty subexpression')
+		# Brackets
+		l,part,r = partition_list(tokens, '(')
+		if part != None:
+			if ')' in l: raise ParseSyntaxError('unmatched ) near',tokens)
+			r.reverse()
+			r,part,inner = partition_list(r,')')
+			if part == None: raise ParseSyntaxError('unmatched ( near',tokens)
+			r.reverse()
+			inner.reverse()
+			inner = self.brackets(self.parse(inner))
+			return self.parse(l+[inner]+r)
+
+		# unary not
+		if tokens[0] == '!':
+			if len(tokens) < 2: raise ParseSyntaxError('syntax error near',tokens)
+			# this only works without other unary operators
+			if tokens[1] in self.valid_tokens: raise ParseSyntaxError('syntax error near', tokens)
+			argument = self.parse([ tokens[1] ])
+			inv = self.notx(argument)
+			return self.parse([inv]+tokens[2:])
+
+		# and
+		l,part,r = partition_list(tokens, '&')
+		if part != None:
+			if not len(l) or not len(r):
+				raise ParseSyntaxError('syntax error near', tokens)
+			l,r = self.parse(l), self.parse(r)
+			return self.andx(l,r)
+
+		# or
+		l,part,r = partition_list(tokens, '|')
+		if part != None:
+			if not len(l) or not len(r):
+				raise ParseSyntaxError('syntax error near', tokens)
+			l,r = self.parse(l), self.parse(r)
+			return self.orx(l,r)
+
+		if len(tokens) == 1:
+			if isinstance(tokens[0], self._leaf):
+				return self.data(tokens[0].data) # base case
+			elif tokens[0] in self.valid_tokens:
+				raise ParseSyntaxError('syntax error near',tokens)
+			return tokens[0] # Already parsed
+
+		# Nothing else is sane
+		print repr(tokens)
+		raise ParseSyntaxError('syntax error near', tokens)
+
+	def brackets(self, expr): 
+		'''You almost never want to override this'''
+		return expr 
+
+	def notx(self, expr): pass
+	def andx(self, expr_l, expr_r): pass
+	def orx(self, expr_l, expr_r): pass
+	def data(self, data): pass
+
+class BoolParse(LexParse):
+	'''example parser implementation
+	bp = BoolParse()
+	assert False or (False and not (True or False)) == False
+	inp = 'False | (False & ! (True | False))'
+	assert bp.parse(bp.lex(inp)) is False
+	'''
+	notx = lambda s,expr: not expr
+	andx = lambda s,l,r: l and r
+	orx = lambda s,l,r: l or r
+	def data(self,data):
+		return not(data.lower() == 'false' or data == '0')
+
+
+class PredicateContainsFactory(LexParse):
+	'''create predicates that act on the contents of a container passed to them'''
+	def predicate_from_string(self, definition):
+		tokens = self.lex(definition)
+		return self.parse(tokens)
+	def notx(self, pred):
+		return notp(pred)
+	def andx(self, pred_l, pred_r):
+		return pred_l & pred_r
+	def orx(self, pred_l, pred_r):
+		return pred_l | pred_r
+	def data(self, data):
+		return predicate(lambda container: data in container)
+
 if __name__ == "__main__":
 	def defer_sample():
 		def a(arga, moo=None, argb=None):
@@ -115,5 +256,23 @@ if __name__ == "__main__":
 		assert eutset == eset.union(tset)
 		assert eitset == eset.intersection(tset)
 
+	def parser_sample():
+		bp = BoolParse()
+		assert False or (False and not (True or False)) == False
+		inp = 'False | (False & ! (True | False))'
+		assert bp.parse(bp.lex(inp)) is False
+		assert bp.parse(bp.lex('true & !false'))
+
+	def predicate_factory_sample():
+		pf = PredicateContainsFactory()
+		pred = pf.predicate_from_string('fish & !cow')
+		assert pred(['fish', 'bat', 'pidgeon'])
+		assert not pred( ['fish', 'cow', 'bat'] )
+		assert not pred( [] )
+		assert not pred( ['cow'] )
+		assert not pred( ['bat','pig'] )
+
 	defer_sample()
 	predicate_sample()
+	parser_sample()
+	predicate_factory_sample()
