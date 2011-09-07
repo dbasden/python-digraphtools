@@ -113,6 +113,25 @@ class LexParse(object):
 		def __repr__(self): return '_leaf(%s)' %(repr(self.data))
 
 	valid_tokens = ['(',')','!','&','|']
+
+	def _match_bracket(self, tokens, i, bopen='(',bclose=')'):
+		'''find the closing bracket that matches an open bracket
+		return None if there is no matching bracket
+		otherwise the index into tokens of the close bracket that matches the opening bracket at position i
+		'''
+		assert i < len(tokens)
+		assert tokens[i] == bopen
+		depth = 0
+		for i in xrange(i,len(tokens)):
+			tok = tokens[i]
+			if tok == bopen: 
+				depth += 1
+			elif tok == bclose:
+				depth -= 1
+				if depth < 0: return None
+				if depth == 0: return i
+		return None
+		
 	def lex(self, s):
 		'''returns a list of tokens from a string
 		tokens returned are anything inside self.valid_tokens or
@@ -264,6 +283,22 @@ if __name__ == "__main__":
 		assert eutset == eset.union(tset)
 		assert eitset == eset.intersection(tset)
 
+	def parser_internal_test():
+		lp = LexParse()
+	        #lp._match_bracket(self, tokens, i, bopen='(',bclose=')'):
+		assert lp._match_bracket('()',0) == 1
+		assert lp._match_bracket('(',0) == None
+		assert lp._match_bracket(')))))()))))',5) == 6
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',0) == 29
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',2) == 3 
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',12) == 25
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',23) == 24
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',23) == 24
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',26) == 27
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',9) == 28
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',10) == 11
+		assert lp._match_bracket('((()(()))(()((()(()()))())()))',16) == 21
+
 	def parser_sample():
 		bp = BoolParse()
 		assert False or (False and not (True or False)) == False
@@ -290,6 +325,7 @@ if __name__ == "__main__":
 		assert allof2('-abc-')
 		assert not_anyof2('12345')
 
+	parser_internal_test()
 	defer_sample()
 	predicate_sample()
 	parser_sample()
