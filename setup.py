@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
 	name='digraphtools',
-	version='0.1.0',
+	version='0.2.1',
 	author='David Basden',
 	author_email='davidb-python@rcpt.to',
 	packages=['digraphtools','digraphtools.test'],

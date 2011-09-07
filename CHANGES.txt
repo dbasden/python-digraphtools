@@ -1,1 +1,5 @@
+v0.2.1, Wed Sep 07 15:15:14 EST 2011 -- Fix naive bug in bracket matching. Oops.
+
+v0.2.0, Mon Aug 22 01:04:14 EST 2011 -- Build predicates from strings.
+
 v0.1.0, Sun Aug 14 22:32:03 EST 2011 -- Initial release.
