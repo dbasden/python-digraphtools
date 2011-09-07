@@ -153,11 +153,12 @@ class LexParse(object):
 		l,part,r = partition_list(tokens, '(')
 		if part != None:
 			if ')' in l: raise ParseSyntaxError('unmatched ) near',tokens)
-			r.reverse()
-			r,part,inner = partition_list(r,')')
-			if part == None: raise ParseSyntaxError('unmatched ( near',tokens)
-			r.reverse()
-			inner.reverse()
+			r.insert(0,'(')
+			rindex = self._match_bracket(r, 0)
+			if rindex is None: raise ParseSyntaxError('unmatched ( near',tokens)
+			assert r[rindex] == ')'
+			inner = r[1:rindex]
+			r = r[rindex+1:]
 			inner = self.brackets(self.parse(inner))
 			return self.parse(l+[inner]+r)
 
@@ -324,6 +325,14 @@ if __name__ == "__main__":
 		assert anyof2('--a--')
 		assert allof2('-abc-')
 		assert not_anyof2('12345')
+
+		pred = pf.predicate_from_string('( a | b | c ) & ( c | e | d )')
+		assert not pred('b')
+		assert pred('c')
+		assert pred('cd')
+		assert pred('acd')
+		assert not pred('ab')
+		assert not pred('a')
 
 	parser_internal_test()
 	defer_sample()
